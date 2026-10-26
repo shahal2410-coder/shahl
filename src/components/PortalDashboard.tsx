@@ -343,7 +343,7 @@ const modules: Record<
         key: "status",
         label: "Publication",
         type: "select",
-        options: ["draft", "published"],
+        options: ["draft", "pending", "published"],
       },
       { key: "remarks", label: "Teacher remarks", type: "textarea" },
     ],
@@ -387,6 +387,8 @@ const modules: Record<
         options: ["submitted", "reviewed"],
       },
       { key: "feedback", label: "Your feedback", type: "textarea" },
+      { key: "score", label: "Score awarded", type: "number" },
+      { key: "maxScore", label: "Score maximum", type: "number" },
     ],
   },
 };
@@ -649,6 +651,7 @@ export default function PortalDashboard() {
         "instructions",
         "resources",
         "submissions",
+        "announcements",
       ].includes(tab));
   function value(row: Row, key: string) {
     const raw = row[key];

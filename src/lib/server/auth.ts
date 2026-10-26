@@ -54,6 +54,11 @@ export function createUser(
   const { name, email, username, password } = validateIdentity(data);
   const id = randomUUID();
   const profile: Record<string, unknown> = { classIds: [], subjectIds: [] };
+  if (role === "student") {
+    const year = new Date().getFullYear();
+    const count = db.prepare("SELECT COUNT(*) AS count FROM users WHERE role='student'").get() as { count: number };
+    profile.admissionId = `EA-${year}-${String(count.count + 1).padStart(5, "0")}`;
+  }
   for (const key of ["guardianName", "guardianPhone", "program"])
     if (data[key] !== undefined)
       profile[key] = stringField(data, key, false, 150);

@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createUser, limitAttempts } from "@/lib/server/auth";
 import { audit } from "@/lib/server/db";
+import { notifyRole } from "@/lib/server/notifications";
 import { body, errorResponse, stringField, fail } from "@/lib/server/http";
 export const runtime = "nodejs";
 export async function POST(request: Request) {
@@ -16,6 +17,7 @@ export async function POST(request: Request) {
     if (data.age === undefined) fail(400, "Age is required.");
     const user = createUser(data, "student", "pending");
     audit(user.id, "student.register", user.id);
+    notifyRole("admin", user.id, { type: "admission", title: "New student application", body: `${user.name} applied for admission.`, href: "/admin" });
     return NextResponse.json(
       {
         message:

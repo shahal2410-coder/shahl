@@ -11,6 +11,7 @@ import {
 } from "./db";
 import { createUser } from "./auth";
 import { fail, idArray, stringField } from "./http";
+import { notifyClass, notifyRole, notifyUsers } from "./notifications";
 
 export const collections = [
   "students",
@@ -110,6 +111,7 @@ function canWrite(
     user.role !== "teacher" ||
     ![
       "assignments",
+      "announcements",
       "resources",
       "attendance",
       "marks",
@@ -162,7 +164,7 @@ function cleanRecord(
     resources: ["url", "fileId"],
     instructions: [],
     attendance: ["studentId", "date", "status"],
-    marks: ["studentId", "status", "remarks"],
+    marks: ["studentId", "status", "remarks", "examId"],
     timetable: ["date", "startTime", "endTime", "meetingUrl"],
     submissions: [
       "assignmentId",
@@ -173,6 +175,8 @@ function cleanRecord(
       "status",
       "submittedAt",
       "fileId",
+      "score",
+      "maxScore",
     ],
   };
   for (const key of [...common, ...(additional[collection] || [])])
@@ -236,14 +240,19 @@ function cleanRecord(
     )
       fail(400, "Enter valid marks between zero and the maximum.");
     data.status = data.status || "draft";
-    if (!["draft", "published"].includes(String(data.status)))
-      fail(400, "Choose draft or published status.");
+    if (!["draft", "pending", "published"].includes(String(data.status)))
+      fail(400, "Choose draft, pending approval, or published status.");
   }
   if (
     collection === "submissions" &&
     !["submitted", "reviewed"].includes(String(data.status))
   )
     fail(400, "Choose a valid submission status.");
+  if (collection === "submissions" && input.score !== undefined) {
+    data.score = Number(input.score);
+    data.maxScore = Number(input.maxScore ?? 100);
+    if (!Number.isFinite(data.score) || !Number.isFinite(data.maxScore) || data.maxScore <= 0 || data.score < 0 || data.score > data.maxScore) fail(400, "Enter a score between zero and the maximum.");
+  }
   for (const key of ["url", "meetingUrl"])
     if (data[key]) {
       try {
@@ -384,8 +393,8 @@ export function mutateRecord(
     if (method === "POST")
       fail(400, "Students submit assignments through the submission form.");
     for (const key of Object.keys(input))
-      if (!["id", "feedback", "status"].includes(key))
-        fail(400, "Only feedback and review status can be changed.");
+      if (!["id", "feedback", "status", "score", "maxScore"].includes(key))
+        fail(400, "Only a score, feedback, and review status can be changed.");
   }
   const data = cleanRecord(collection, { ...existing, ...input });
   if (data.fileId) {
@@ -428,6 +437,12 @@ export function mutateRecord(
       "INSERT INTO records (id,collection,payload_json,created_by,created_at,updated_at) VALUES (?,?,?,?,?,?)",
     ).run(id, collection, JSON.stringify(data), user.id, now, now);
   audit(user.id, `${collection}.${existing ? "update" : "create"}`, id);
+  if (collection === "marks" && data.status === "pending")
+    notifyRole("admin", user.id, { type: "marks", title: "Results ready for approval", body: "A teacher submitted results for review.", href: "/admin" });
+  if (collection === "marks" && data.status === "published" && existing?.status !== "published")
+    notifyUsers([String(data.studentId)], user.id, { type: "marks", title: "Results published", body: "Your exam results are now available.", href: "/student" });
+  if (["announcements", "assignments", "instructions", "timetable"].includes(collection) && data.classId && !existing)
+    notifyClass(String(data.classId), user.id, { type: collection, title: String(data.title), body: String(data.description || "A new academy update is available."), href: "/student" });
   return { ...data, id, createdAt: existing?.createdAt || now, updatedAt: now };
 }
 export function submitAssignment(
