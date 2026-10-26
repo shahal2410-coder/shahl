@@ -65,7 +65,7 @@ Run this application on a persistent Node server with HTTPS. The SQLite database
 
 The repository originally contained only a README. No existing application, official logo file, student data, or backend was available to migrate. The current wordmark, compass symbol, and illustrations are original interface artwork; replace the wordmark with the official supplied logo when available. The learning character is animated SVG, not a rigged 3D asset. Learning exercises are interactive exploratory tools; completion is not represented as an official academic record.
 
-No deployment has been published.
+No deployment has been published. The Railway deployment branch is `codex/railway-deploy-explorium`.
 
 ## Verification
 
@@ -82,4 +82,4 @@ Generated browser captures are in `artifacts/` and are ignored by Git.
 
 ## Railway deployment
 
-The root `railway.json` builds the optimized Next.js app, starts it with the Railway-assigned port, checks `/api/public`, and restarts failed processes. In the Railway service settings, attach a persistent volume at `/app/data`, set `EXPLORIUM_DB_PATH=/app/data/explorium.sqlite`, and keep a single running replica: student accounts, records, and uploaded files live in the SQLite database. Configure email and staff credentials through Railway's secure Variables settings. Provision the first administrator from the deployment shell with `npm run create:admin` after the volume is mounted; this script refuses duplicates and does not print passwords. Railway deployment requires the repository source in a Git commit and an authenticated Railway project; neither credentials nor public database data belong in this repository.
+The root `railway.json` builds the optimized Next.js app, starts it with the Railway-assigned port, checks `/api/public`, and restarts failed processes. In the Railway service settings, attach a persistent volume at `/app/data`, set `EXPLORIUM_DB_PATH=/app/data/explorium.sqlite`, and keep a single running replica: student accounts, records, and uploaded files live in the SQLite database. Set `EXPLORIUM_ACCOUNT_PASSWORD` to a private 12–128 character value through Railway's secure Variables settings before the first deployment. Startup creates the first administrator inside the mounted database, then leaves existing accounts unchanged on future deploys. Remove the password variable from Railway once the first administrator is created. Set `EXPLORIUM_ACCOUNT_EMAIL` or `EXPLORIUM_ACCOUNT_USERNAME` there if you want different login details. Configure optional email delivery through Railway's secure Variables settings. Railway deployment requires the repository source in a Git commit and an authenticated Railway project; neither credentials nor public database data belong in this repository.
